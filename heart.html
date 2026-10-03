@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Pulsoid Talking Platypus +10 BPM</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 10px;
+      background: transparent;
+      color: #FFFFFF;
+      font-family: 'Arial Black', Impact, sans-serif;
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      overflow: hidden;
+    }
+
+    /* Animated Platypus Sprite Wrapper */
+    .platypus-container {
+      width: 120px;
+      height: 120px;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .platypus-container img {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+    }
+
+    /* Pulse animation synced to heart rate */
+    .pulse {
+      animation: bounce 0.8s infinite ease-in-out alternate;
+    }
+
+    @keyframes bounce {
+      0% { transform: scale(1); }
+      100% { transform: scale(1.08); }
+    }
+
+    .bpm-text {
+      font-size: 64px;
+      text-shadow: 3px 3px 10px rgba(0, 0, 0, 0.9);
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+    }
+
+    .bpm-label {
+      font-size: 28px;
+      color: #FFCC00;
+    }
+
+    #status {
+      font-size: 14px;
+      color: #FFCC00;
+      font-family: monospace;
+      position: absolute;
+      bottom: 0;
+      left: 10px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="platypus-container pulse">
+    <!-- Official Pulsoid Talking Platypus Animated GIF -->
+    <img src="https://pulsoid.net/static/widgets/platypus.gif" alt="Talking Platypus" />
+  </div>
+
+  <div class="bpm-text">
+    <span id="bpm">--</span>
+    <span class="bpm-label">BPM</span>
+  </div>
+
+  <div id="status">Connecting...</div>
+
+  <script>
+    const PULSOID_INPUT = "https://pulsoid.net/widget/view/b2ccce1a-7869-4591-8b9f-bb4ae5340eb7"; 
+    const OFFSET = 10; 
+
+    function getWidgetId(input) {
+      if (!input || input.includes("PASTE_YOUR_PULSOID")) return null;
+      const parts = input.trim().split('/');
+      return parts[parts.length - 1];
+    }
+
+    const widgetId = getWidgetId(PULSOID_INPUT);
+    const statusEl = document.getElementById('status');
+
+    if (!widgetId) {
+      statusEl.innerText = "Error: Invalid Pulsoid Widget URL";
+      statusEl.style.color = "#FF4444";
+    } else {
+      const socket = new WebSocket(`wss://ram.pulsoid.net/v1/live/${widgetId}`);
+
+      socket.onopen = () => {
+        statusEl.innerText = "Connected!";
+        statusEl.style.color = "#00FF66";
+      };
+
+      socket.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (data && data.bpm) {
+            const rawBPM = parseInt(data.bpm, 10);
+            const modifiedBPM = rawBPM + OFFSET;
+            
+            document.getElementById('bpm').innerText = modifiedBPM;
+            statusEl.style.display = "none";
+          }
+        } catch (e) {
+          console.error("Error parsing message", e);
+        }
+      };
+
+      socket.onerror = () => {
+        statusEl.innerText = "Connection error.";
+        statusEl.style.color = "#FF4444";
+      };
+
+      socket.onclose = () => {
+        statusEl.innerText = "Disconnected.";
+        statusEl.style.color = "#FF4444";
+      };
+    }
+  </script>
+</body>
+</html>
